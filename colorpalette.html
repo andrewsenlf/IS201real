@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Palette Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <style>
+        .color-box {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .color-box:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .copy-feedback, .lock-feedback {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .copy-feedback.show, .lock-feedback.show {
+            opacity: 1;
+        }
+        .locked {
+            border: 2px solid #ffd700;
+        }
+        .preview-card {
+            transition: all 0.3s ease;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans min-h-screen">
+    <div class="container mx-auto p-6">
+        <h1 class="text-4xl font-bold text-center text-gray-800 mb-4">Color Palette Generator</h1>
+        <p class="text-center text-gray-600 mb-6">Create stunning color palettes for your design projects!</p>
+
+        <div class="flex flex-col sm:flex-row justify-center items-center gap-4 mb-8">
+            <select id="paletteType" class="border border-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="analogous">Analogous</option>
+                <option value="complementary">Complementary</option>
+                <option value="triadic">Triadic</option>
+                <option value="monochromatic">Monochromatic</option>
+            </select>
+            <button id="generateBtn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-300">
+                Generate Palette
+            </button>
+            <button id="exportPngBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded transition duration-300">
+                Export as PNG
+            </button>
+            <button id="exportCssBtn" class="bg-purple-500 hover:bg-purple-600 text-white font-bold py-2 px-4 rounded transition duration-300">
+                Export as CSS
+            </button>
+        </div>
+
+        <div id="palette" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <!-- Color boxes will be dynamically inserted here -->
+        </div>
+
+        <div class="bg-white p-6 rounded-lg shadow-lg mb-8">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4">UI Preview</h2>
+            <div id="preview" class="h-80 rounded-lg bg-gray-100 p-4">
+                <div id="previewCard" class="preview-card bg-white p-6 rounded-lg shadow-md w-full max-w-md mx-auto fade-in">
+                    <h3 id="previewTitle" class="text-xl font-bold mb-2">Sample Card</h3>
+                    <p id="previewText" class="text-gray-600 mb-4">This is a sample UI card styled with your palette.</p>
+                    <button id="previewButton" class="px-4 py-2 rounded font-semibold">Sample Button</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center">
+            <a href="scratch.html" class="text-blue-500 hover:underline text-lg">Back to Scratch Page</a>
+        </div>
+    </div>
+
+    <script>
+        let lockedColors = [false, false, false, false];
+        let currentColors = [];
+
+        // Generate palette based on type
+        function generateColorPalette(type) {
+            const baseHue = Math.random() * 360;
+            let colors = [];
+
+            switch (type) {
+                case 'analogous':
+                    colors = [
+                        { h: baseHue, s: 70, l: 50 },
+                        { h: (baseHue + 30) % 360, s: 65, l: 55 },
+                        { h: (baseHue + 60) % 360, s: 60, l: 50 },
+                        { h: (baseHue - 30) % 360, s: 50, l: 70 }
+                    ];
+                    break;
+                case 'complementary':
+                    colors = [
+                        { h: baseHue, s: 70, l: 50 },
+                        { h: (baseHue + 180) % 360, s: 65, l: 50 },
+                        { h: baseHue, s: 60, l: 60 },
+                        { h: (baseHue + 180) % 360, s: 50, l: 70 }
+                    ];
+                    break;
+                case 'triadic':
+                    colors = [
+                        { h: baseHue, s: 70, l: 50 },
+                        { h: (baseHue + 120) % 360, s: 65, l: 50 },
+                        { h: (baseHue + 240) % 360, s: 60, l: 50 },
+                        { h: baseHue, s: 50, l: 70 }
+                    ];
+                    break;
+                case 'monochromatic':
+                    colors = [
+                        { h: baseHue, s: 70, l: 50 },
+                        { h: baseHue, s: 50, l: 60 },
+                        { h: baseHue, s: 40, l: 70 },
+                        { h: baseHue, s: 30, l: 80 }
+                    ];
+                    break;
+            }
+
+            return colors.map((color, index) => lockedColors[index] ? currentColors[index] : hslToHex(color.h, color.s, color.l));
+        }
+
+        // Convert HSL to Hex
+        function hslToHex(h, s, l) {
+            l /= 100;
+            const a = s * Math.min(l, 1 - l) / 100;
+            const f = n => {
+                const k = (n + h / 30) % 12;
+                const color = l - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+                return Math.round(255 * color).toString(16).padStart(2, '0');
+            };
+            return `#${f(0)}${f(8)}${f(4)}`;
+        }
+
+        // Render palette
+        function renderPalette() {
+            const palette = document.getElementById('palette');
+            palette.innerHTML = '';
+            const type = document.getElementById('paletteType').value;
+            currentColors = generateColorPalette(type);
+
+            currentColors.forEach((color, index) => {
+                const colorBox = document.createElement('div');
+                colorBox.className = `color-box p-4 rounded-lg shadow-md text-center cursor-pointer ${lockedColors[index] ? 'locked' : ''}`;
+                colorBox.style.backgroundColor = color;
+                colorBox.innerHTML = `
+                    <div class="text-white font-semibold">${color}</div>
+                    <div class="copy-feedback text-sm text-white mt-2">Copied!</div>
+                    <div class="lock-feedback text-sm text-white mt-2">${lockedColors[index] ? 'Unlocked' : 'Locked'}</div>
+                    <button class="lock-btn mt-2 bg-opacity-50 bg-gray-800 text-white text-xs py-1 px-2 rounded">${lockedColors[index] ? 'Unlock' : 'Lock'}</button>
+                `;
+                colorBox.querySelector('.lock-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleLock(index, colorBox);
+                });
+                colorBox.addEventListener('click', () => copyToClipboard(color, colorBox));
+                palette.appendChild(colorBox);
+            });
+
+            // Update preview
+            updatePreview();
+            // Save to local storage
+            localStorage.setItem('lastPalette', JSON.stringify(currentColors));
+            localStorage.setItem('lastPaletteType', type);
+        }
+
+        // Update preview card
+        function updatePreview() {
+            const card = document.getElementById('previewCard');
+            const title = document.getElementById('previewTitle');
+            const text = document.getElementById('previewText');
+            const button = document.getElementById('previewButton');
+
+            card.style.backgroundColor = currentColors[0];
+            title.style.color = currentColors[2];
+            text.style.color = currentColors[3];
+            button.style.backgroundColor = currentColors[1];
+            button.style.color = currentColors[3];
+            card.classList.remove('fade-in');
+            void card.offsetWidth; // Trigger reflow
+            card.classList.add('fade-in');
+        }
+
+        // Copy hex code to clipboard
+        function copyToClipboard(color, colorBox) {
+            navigator.clipboard.writeText(color).then(() => {
+                const feedback = colorBox.querySelector('.copy-feedback');
+                feedback.classList.add('show');
+                setTimeout(() => feedback.classList.remove('show'), 1000);
+            });
+        }
+
+        // Toggle lock state
+        function toggleLock(index, colorBox) {
+            lockedColors[index] = !lockedColors[index];
+            const feedback = colorBox.querySelector('.lock-feedback');
+            feedback.textContent = lockedColors[index] ? 'Unlocked' : 'Locked';
+            feedback.classList.add('show');
+            setTimeout(() => feedback.classList.remove('show'), 1000);
+            colorBox.querySelector('.lock-btn').textContent = lockedColors[index] ? 'Unlock' : 'Lock';
+            colorBox.classList.toggle('locked');
+        }
+
+        // Export as PNG
+        function exportAsPng() {
+            const palette = document.getElementById('palette');
+            html2canvas(palette).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'color-palette.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            });
+        }
+
+        // Export as CSS
+        function exportAsCss() {
+            const cssContent = `:root {
+${currentColors.map((color, index) => `    --color-${index + 1}: ${color};`).join('\n')}
+}`;
+            const blob = new Blob([cssContent], { type: 'text/css' });
+            const link = document.createElement('a');
+            link.download = 'color-palette.css';
+            link.href = URL.createObjectURL(blob);
+            link.click();
+        }
+
+        // Event listeners
+        document.getElementById('generateBtn').addEventListener('click', renderPalette);
+        document.getElementById('exportPngBtn').addEventListener('click', exportAsPng);
+        document.getElementById('exportCssBtn').addEventListener('click', exportAsCss);
+        document.getElementById('paletteType').addEventListener('change', renderPalette);
+
+        // Load last palette from local storage
+        const lastPalette = localStorage.getItem('lastPalette');
+        const lastPaletteType = localStorage.getItem('lastPaletteType');
+        if (lastPalette && lastPaletteType) {
+            currentColors = JSON.parse(lastPalette);
+            document.getElementById('paletteType').value = lastPaletteType;
+            renderPalette();
+        } else {
+            renderPalette();
+        }
+    </script>
+</body>
+</html>
